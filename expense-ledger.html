@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="支出メモ" />
+<meta name="theme-color" content="#0a0908" />
+<title>支出メモ | EXPENSE LEDGER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap');
+
+  :root {
+    --bg: #0a0908;
+    --panel: #16130e;
+    --panel-alt: #1d1810;
+    --line: rgba(245, 158, 11, 0.16);
+    --line-strong: rgba(245, 158, 11, 0.34);
+    --amber-100: #fde9c8;
+    --amber-300: #fbbf24;
+    --amber-500: #f59e0b;
+    --amber-600: #d97706;
+    --amber-700: #b45309;
+    --text: #f3ead9;
+    --text-muted: #8f8471;
+    --sunday: #ef4444;
+    --saturday: #38bdf8;
+    --danger: #ef4444;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
+    min-height: 100%;
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 50% 0%, rgba(245,158,11,0.08) 0%, transparent 55%),
+      linear-gradient(rgba(245,158,11,0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,158,11,0.045) 1px, transparent 1px);
+    background-size: auto, 28px 28px, 28px 28px;
+    background-position: center;
+    overscroll-behavior-y: contain;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .wrap {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: calc(28px + env(safe-area-inset-top, 0px)) 16px calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ---------- Header ---------- */
+  .header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+  .brand-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.26em;
+    color: var(--amber-500);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .brand-title {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    color: var(--amber-100);
+    text-shadow: 0 0 18px rgba(245,158,11,0.35);
+  }
+  .lock-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+    padding: 9px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    min-height: 40px;
+  }
+  .lock-btn:active { border-color: var(--amber-500); color: var(--amber-300); }
+
+  /* ---------- List switch ---------- */
+  .list-switch {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .list-switch button {
+    flex: 1;
+    padding: 12px 8px;
+    min-height: 46px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    color: var(--text-muted);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 13px;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: 0.15s;
+  }
+  .list-switch button.active {
+    background: linear-gradient(180deg, var(--amber-500), var(--amber-600));
+    color: #1a1206;
+    border-color: var(--amber-500);
+    box-shadow: 0 0 16px rgba(245,158,11,0.28);
+  }
+
+  /* ---------- Category filter ---------- */
+  .category-filter {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 2px 10px;
+    margin-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .category-filter::-webkit-scrollbar { display: none; }
+  .category-chip {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    min-height: 32px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .category-chip.active {
+    background: var(--amber-600);
+    color: #1a1206;
+    border-color: var(--amber-600);
+    font-weight: 700;
+  }
+
+  /* ---------- Gate ---------- */
+  .gate-wrap {
+    max-width: 380px;
+    margin: 60px auto;
+    text-align: center;
+  }
+  .gate-icon {
+    width: 58px; height: 58px;
+    margin: 0 auto 18px;
+    border: 1px solid var(--amber-700);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--amber-500);
+    box-shadow: 0 0 24px rgba(245,158,11,0.25), inset 0 0 12px rgba(245,158,11,0.1);
+  }
+  .gate-prompt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--amber-500);
+    margin-bottom: 6px;
+  }
+  .gate-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: var(--amber-100); }
+  .gate-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 22px; }
+  .gate-form { display: flex; flex-direction: column; gap: 10px; }
+  .gate-input {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    padding: 13px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--amber-100);
+    outline: none;
+    letter-spacing: 0.12em;
+    text-align: center;
+  }
+  .gate-input:focus { border-color: var(--amber-500); box-shadow: 0 0 0 3px rgba(245,158,11,0.14); }
+  .gate-btn {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 13px;
+    min-height: 46px;
+    border-radius: 4px;
+    border: 1px solid var(--amber-500);
+    background: linear-gradient(180deg, var(--amber-500), var(--amber-600));
+    color: #1a1206;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    box-shadow: 0 0 18px rgba(245,158,11,0.3);
+  }
+  .gate-error { color: var(--danger); font-size: 12px; }
+  .gate-note { font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.7; }
+  .reset-row { text-align: center; margin-top: 20px; }
+  .reset-link {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 11px; text-decoration: underline; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 8px;
+  }
+  .reset-confirm {
+    margin-top: 8px; font-size: 12px; display: flex; gap: 8px;
+    justify-content: center; align-items: center; flex-wrap: wrap;
+  }
+  .reset-confirm button {
+    border: 1px solid var(--line-strong); background: var(--panel);
+    color: var(--text); border-radius: 4px; padding: 8px 12px;
+    cursor: pointer; font-size: 12px; font-family: 'Zen Kaku Gothic New', sans-serif;
+    min-height: 38px;
+  }
+  .reset-confirm button.danger { border-color: var(--danger); color: var(--danger); }
+
+  /* ---------- Total display ---------- */
+  .total-panel {
+    background: var(--panel);
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .total-panel::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(245,158,11,0.06), transparent 60%);
+    pointer-events: none;
+  }
+  .total-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--amber-600);
+    text-transform: uppercase;
+  }
+  .total-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 38px;
+    color: var(--amber-300);
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 22px rgba(245,158,11,0.45);
+    margin-top: 4px;
+    transition: text-shadow 0.4s ease;
+  }
+  .total-value.flash { text-shadow: 0 0 40px rgba(251,191,36,0.9); }
+  .total-breakdown {
+    margin-top: 10px;
+    display: flex;
+    gap: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .total-breakdown b { color: var(--amber-300); font-weight: 700; }
+  .total-count {
+    position: absolute;
+    right: 18px; bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* ---------- Form ---------- */
+  .form-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 22px;
+  }
+  .form-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .form-panel-header.expanded { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .form-panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: var(--amber-500);
+    text-transform: uppercase;
+  }
+  .toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+    padding: 8px 11px;
+    min-height: 38px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .toggle-btn svg { transition: transform 0.2s ease; }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .form-field { display: flex; flex-direction: column; gap: 5px; }
+  .form-field.full { grid-column: 1 / -1; }
+  .form-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--amber-600);
+    text-transform: uppercase;
+  }
+  .form-input {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 16px;
+    padding: 10px 11px;
+    min-height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--panel-alt);
+    color: var(--text);
+    outline: none;
+    width: 100%;
+  }
+  .form-input.mono { font-family: 'JetBrains Mono', monospace; }
+  .form-input:focus { border-color: var(--amber-500); box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+  .form-input::placeholder { color: #5c5545; }
+  .form-error { color: var(--danger); font-size: 12px; margin-top: 8px; }
+
+  .stack-field { display: flex; flex-direction: column; gap: 8px; }
+  .stack-sub { display: flex; flex-direction: column; gap: 4px; }
+  .stack-sub-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .add-btn {
+    margin-top: 14px;
+    width: 100%;
+    min-height: 48px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    background: linear-gradient(180deg, var(--amber-500), var(--amber-600));
+    color: #1a1206;
+    border: none; border-radius: 4px;
+    font-weight: 700; font-size: 13px; letter-spacing: 0.08em;
+    cursor: pointer;
+    box-shadow: 0 0 18px rgba(245,158,11,0.28);
+  }
+
+  /* ---------- Star rating ---------- */
+  .star-row { display: inline-flex; gap: 2px; }
+  .star-btn {
+    background: none; border: none; padding: 6px; margin: -6px; cursor: pointer; line-height: 0;
+  }
+  .star-btn svg { display: block; }
+
+  /* ---------- List ---------- */
+  .ledger-heading {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    text-transform: uppercase;
+  }
+  .entry-row {
+    display: grid;
+    grid-template-columns: 62px 1fr 90px 70px 30px;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+  .entry-row:active { background: rgba(245,158,11,0.06); }
+  .entry-date { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--amber-100); font-size: 12px; line-height: 1.35; }
+  .entry-dow { font-size: 9px; margin-left: 1px; display: block; color: var(--text-muted); }
+  .entry-cat-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--text-muted);
+    display: inline-block;
+    max-width: 58px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .entry-items { display: flex; gap: 8px; min-width: 0; }
+  .entry-item-half { flex: 1 1 0; min-width: 0; }
+  .entry-item-half + .entry-item-half { border-left: 1px solid var(--line); padding-left: 8px; }
+  .entry-item-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .entry-item-tag.expense { color: var(--amber-500); }
+  .entry-item-tag.income { color: var(--saturday); }
+  .entry-item-name {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .entry-amounts { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+  .entry-amount-1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; color: var(--amber-300);
+    font-variant-numeric: tabular-nums;
+  }
+  .entry-amount-2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500; color: var(--saturday);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+  }
+  .entry-ratings { display: flex; flex-direction: column; gap: 4px; }
+  .del-btn {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; padding: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .del-btn:active { color: var(--danger); }
+  .empty-state {
+    text-align: center; padding: 34px 10px; color: var(--text-muted);
+    font-size: 13px; border: 1px dashed var(--line-strong); border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .save-error { color: var(--danger); font-size: 12px; text-align: center; margin-top: 12px; }
+  .loading { text-align: center; padding-top: 90px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+  @media (max-width: 480px) {
+    .entry-row {
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "date del"
+        "items items"
+        "amounts ratings";
+      row-gap: 7px;
+      padding: 13px 8px;
+    }
+    .entry-date { grid-area: date; display: flex; align-items: center; gap: 8px; }
+    .entry-cat-badge { margin-top: 0; }
+    .del-btn { grid-area: del; justify-self: end; }
+    .entry-items { grid-area: items; }
+    .entry-amounts { grid-area: amounts; align-items: flex-start; }
+    .entry-ratings { grid-area: ratings; align-items: flex-end; }
+    .form-grid { grid-template-columns: 1fr; }
+    .total-value { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="loading">読み込み中…</div>
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'expense-memo-account-v2';
+  const DOW = ['日', '月', '火', '水', '木', '金', '土'];
+  const LIST_LABELS = {
+    expense: { title: '支出メモ', tag: 'DAILY EXPENSE LOG', totalLabel: 'TOTAL EXPENSE' },
+    wishlist: { title: '行きたい店リスト', tag: 'PLACES TO VISIT', totalLabel: 'TOTAL BUDGET' },
+  };
+  const DEFAULT_CATEGORIES = {
+    expense: ['食費', '日用品', '交通', '娯楽', '医療', 'その他'],
+    wishlist: ['レストラン', 'カフェ', '居酒屋', '観光', 'ショッピング', 'その他'],
+  };
+
+  const storageAdapter = {
+    async get(key) {
+      if (window.storage && typeof window.storage.get === 'function') {
+        try {
+          const res = await window.storage.get(key, false);
+          return res || null;
+        } catch (e) {
+          // フォールバックへ
+        }
+      }
+      try {
+        const raw = window.localStorage.getItem(key);
+        return raw !== null ? { key, value: raw, shared: false } : null;
+      } catch (e) {
+        return null;
+      }
+    },
+    async set(key, value) {
+      if (window.storage && typeof window.storage.set === 'function') {
+        try {
+          const r = await window.storage.set(key, value, false);
+          if (r) return r;
+        } catch (e) {
+          // フォールバックへ
+        }
+      }
+      try {
+        window.localStorage.setItem(key, value);
+        return { key, value, shared: false };
+      } catch (e) {
+        return null;
+      }
+    },
+    async remove(key) {
+      if (window.storage && typeof window.storage.delete === 'function') {
+        try { await window.storage.delete(key, false); } catch (e) {}
+      }
+      try { window.localStorage.removeItem(key); } catch (e) {}
+    },
+  };
+
+  let state = {
+    loading: true,
+    hasPassword: false,
+    unlocked: false,
+    storedPassword: null,
+    lists: { expense: [], wishlist: [] },
+    activeList: 'expense',
+    categoryFilter: { expense: 'すべて', wishlist: 'すべて' },
+    pwError: '',
+    confirmingReset: false,
+    saveError: '',
+    formError: '',
+    fRating1: 0,
+    fRating2: 0,
+    stamped: false,
+    formVisible: true,
+    recheckMsg: '',
+  };
+
+  const app = document.getElementById('app');
+
+  function formatYen(n) {
+    return '¥' + Number(n || 0).toLocaleString('ja-JP');
+  }
+  function todayStr() {
+    const d = new Date();
+    const off = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - off * 60000);
+    return local.toISOString().slice(0, 10);
+  }
+  function dowLabel(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return '';
+    return DOW[d.getDay()];
+  }
+  function dowColor(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return 'var(--text-muted)';
+    const day = d.getDay();
+    if (day === 0) return 'var(--sunday)';
+    if (day === 6) return 'var(--saturday)';
+    return 'var(--text-muted)';
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function starSvg(filled, size) {
+    const c = filled ? 'var(--amber-500)' : 'none';
+    const stroke = filled ? 'var(--amber-500)' : 'var(--line-strong)';
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + c + '" stroke="' + stroke + '" stroke-width="1.75" stroke-linejoin="round">' +
+      '<polygon points="12 2 15.09 8.63 22 9.27 16.5 14.14 18.18 21 12 17.27 5.82 21 7.5 14.14 2 9.27 8.91 8.63 12 2"/></svg>';
+  }
+
+  function starRow(targetId, value, size, editable) {
+    let html = '<div class="star-row" data-star-target="' + targetId + '">';
+    for (let n = 1; n <= 3; n++) {
+      html += '<button type="button" class="star-btn" data-star-value="' + n + '" ' +
+        (editable ? '' : 'style="cursor:default"') + '>' + starSvg(value >= n, size) + '</button>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function currentEntries() {
+    return state.lists[state.activeList];
+  }
+
+  async function loadData() {
+    try {
+      const res = await storageAdapter.get(STORAGE_KEY);
+      if (res && res.value) {
+        const parsed = JSON.parse(res.value);
+        state.storedPassword = parsed.password || null;
+        state.hasPassword = !!parsed.password;
+        if (parsed.lists && typeof parsed.lists === 'object') {
+          state.lists.expense = Array.isArray(parsed.lists.expense) ? parsed.lists.expense : [];
+          state.lists.wishlist = Array.isArray(parsed.lists.wishlist) ? parsed.lists.wishlist : [];
+        } else if (Array.isArray(parsed.entries)) {
+          // 旧バージョンからの移行
+          state.lists.expense = parsed.entries;
+          state.lists.wishlist = [];
+        }
+      }
+    } catch (e) {
+      // 初回利用: データなし
+    } finally {
+      state.loading = false;
+      render();
+    }
+  }
+
+  async function persist() {
+    const result = await storageAdapter.set(
+      STORAGE_KEY,
+      JSON.stringify({ password: state.storedPassword, lists: state.lists })
+    );
+    state.saveError = result ? '' : '保存に失敗しました。もう一度お試しください。';
+  }
+
+  async function handleReset() {
+    await storageAdapter.remove(STORAGE_KEY);
+    state.storedPassword = null;
+    state.hasPassword = false;
+    state.lists = { expense: [], wishlist: [] };
+    state.unlocked = false;
+    state.confirmingReset = false;
+    render();
+  }
+
+  function renderGate() {
+    const setupMode = !state.hasPassword;
+    app.innerHTML =
+      '<div class="gate-wrap">' +
+        '<div class="gate-icon">' +
+          '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/></svg>' +
+        '</div>' +
+        '<div class="gate-prompt">&gt; SECURE_LEDGER.ACCESS</div>' +
+        (setupMode
+          ? '<div class="gate-title">支出メモ帳を新しく作成</div><div class="gate-desc">この帳面を開くためのパスワードを設定してください</div>'
+          : '<div class="gate-title">ロック中</div><div class="gate-desc">パスワードを入力してください</div>') +
+        '<form class="gate-form" id="gate-form">' +
+          '<input class="gate-input" type="password" id="pw1" placeholder="' + (setupMode ? 'パスワード（4文字以上）' : 'パスワード') + '" autofocus />' +
+          (setupMode ? '<input class="gate-input" type="password" id="pw2" placeholder="パスワード（確認）" />' : '') +
+          (state.pwError ? '<div class="gate-error">' + escapeHtml(state.pwError) + '</div>' : '') +
+          '<button class="gate-btn" type="submit">' + (setupMode ? '設定して開く' : '開く') + '</button>' +
+        '</form>' +
+        (setupMode
+          ? '<div class="gate-note">パスワードはこの端末のあなたの領域に保存され、次回開いたときも同じ帳面が自動的に開きます。忘れた場合は帳面をリセットして最初から作り直してください。</div>' +
+            '<div class="reset-row">' +
+              '<button class="reset-link" id="recheck-link">保存データを開く（既存の帳面を読み込み直す）</button>' +
+              (state.recheckMsg ? '<div class="gate-error" style="margin-top:8px">' + escapeHtml(state.recheckMsg) + '</div>' : '') +
+            '</div>'
+          : '<div class="reset-row">' +
+              (!state.confirmingReset
+                ? '<button class="reset-link" id="reset-link">パスワードを忘れた場合はこちら</button>'
+                : '<div class="reset-confirm"><span>記録が全て消去されます。よろしいですか？</span><button class="danger" id="reset-yes">リセットする</button><button id="reset-no">やめる</button></div>')
+            + '</div>') +
+      '</div>';
+
+    document.getElementById('gate-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      state.pwError = '';
+      const v1 = document.getElementById('pw1').value;
+      if (setupMode) {
+        const v2 = document.getElementById('pw2').value;
+        if (v1.length < 4) { state.pwError = '4文字以上で設定してください'; render(); return; }
+        if (v1 !== v2) { state.pwError = '確認用パスワードが一致しません'; render(); return; }
+        state.storedPassword = v1;
+        state.hasPassword = true;
+        state.unlocked = true;
+        persist();
+        render();
+      } else {
+        if (v1 === state.storedPassword) {
+          state.unlocked = true;
+          render();
+        } else {
+          state.pwError = 'パスワードが違います';
+          render();
+        }
+      }
+    });
+
+    const resetLink = document.getElementById('reset-link');
+    if (resetLink) resetLink.addEventListener('click', () => { state.confirmingReset = true; render(); });
+    const resetYes = document.getElementById('reset-yes');
+    if (resetYes) resetYes.addEventListener('click', handleReset);
+    const resetNo = document.getElementById('reset-no');
+    if (resetNo) resetNo.addEventListener('click', () => { state.confirmingReset = false; render(); });
+
+    const recheckLink = document.getElementById('recheck-link');
+    if (recheckLink) recheckLink.addEventListener('click', async () => {
+      state.recheckMsg = '確認中…';
+      render();
+      const res = await storageAdapter.get(STORAGE_KEY);
+      if (res && res.value) {
+        try {
+          const parsed = JSON.parse(res.value);
+          if (parsed.password) {
+            state.storedPassword = parsed.password;
+            if (parsed.lists && typeof parsed.lists === 'object') {
+              state.lists.expense = Array.isArray(parsed.lists.expense) ? parsed.lists.expense : [];
+              state.lists.wishlist = Array.isArray(parsed.lists.wishlist) ? parsed.lists.wishlist : [];
+            } else if (Array.isArray(parsed.entries)) {
+              state.lists.expense = parsed.entries;
+            }
+            state.hasPassword = true;
+            state.recheckMsg = '';
+            render();
+            return;
+          }
+        } catch (e) {}
+      }
+      state.recheckMsg = '保存データが見つかりませんでした。新規作成に進んでください。';
+      render();
+    });
+  }
+
+  function categoryChipsHtml() {
+    const list = state.activeList;
+    const used = currentEntries().map((en) => en.category).filter(Boolean);
+    const cats = [];
+    DEFAULT_CATEGORIES[list].forEach((c) => { if (!cats.includes(c)) cats.push(c); });
+    used.forEach((c) => { if (!cats.includes(c)) cats.push(c); });
+    const active = state.categoryFilter[list];
+    let html = '<div class="category-filter">';
+    html += '<button type="button" class="category-chip' + (active === 'すべて' ? ' active' : '') + '" data-cat="すべて">すべて</button>';
+    cats.forEach((c) => {
+      html += '<button type="button" class="category-chip' + (active === c ? ' active' : '') + '" data-cat="' + escapeHtml(c) + '">' + escapeHtml(c) + '</button>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function categoryDatalistHtml() {
+    const list = state.activeList;
+    const used = currentEntries().map((en) => en.category).filter(Boolean);
+    const cats = [];
+    DEFAULT_CATEGORIES[list].forEach((c) => { if (!cats.includes(c)) cats.push(c); });
+    used.forEach((c) => { if (!cats.includes(c)) cats.push(c); });
+    return cats.map((c) => '<option value="' + escapeHtml(c) + '"></option>').join('');
+  }
+
+  function renderMain() {
+    const list = state.activeList;
+    const labels = LIST_LABELS[list];
+    const entries = currentEntries();
+    const filter = state.categoryFilter[list];
+    const visible = filter === 'すべて' ? entries : entries.filter((en) => en.category === filter);
+
+    let total1 = 0, total2 = 0;
+    visible.forEach((en) => { total1 += Number(en.amount1) || 0; total2 += Number(en.amount2) || 0; });
+    const total = total1 + total2;
+    const sorted = [...visible].sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+
+    let rows = '';
+    if (sorted.length === 0) {
+      rows = '<div class="empty-state">' + (entries.length === 0 ? 'まだ記録がありません。上のフォームから記帳してください。' : '該当するカテゴリーの記録がありません。') + '</div>';
+    } else {
+      rows = sorted.map((en) => {
+        return '<div class="entry-row" data-id="' + en.id + '">' +
+          '<div class="entry-date">' + escapeHtml(en.date.replace(/-/g, '/')) +
+            '<span class="entry-dow" style="color:' + dowColor(en.date) + '">（' + dowLabel(en.date) + '）</span>' +
+            (en.category ? '<span class="entry-cat-badge">' + escapeHtml(en.category) + '</span>' : '') +
+          '</div>' +
+          '<div class="entry-items">' +
+            '<div class="entry-item-half">' +
+              '<div class="entry-item-tag expense">支出</div>' +
+              '<div class="entry-item-name">' + escapeHtml(en.item1 || '－') + '</div>' +
+            '</div>' +
+            '<div class="entry-item-half">' +
+              '<div class="entry-item-tag income">収入</div>' +
+              '<div class="entry-item-name">' + escapeHtml(en.item2 || '－') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="entry-amounts">' +
+            '<div class="entry-amount-1">' + formatYen(en.amount1) + '</div>' +
+            '<div class="entry-amount-2">' + formatYen(en.amount2) + '</div>' +
+          '</div>' +
+          '<div class="entry-ratings">' +
+            starRow('row1-' + en.id, en.rating1 || 0, 14, true) +
+            starRow('row2-' + en.id, en.rating2 || 0, 14, true) +
+          '</div>' +
+          '<button class="del-btn" data-del="' + en.id + '" aria-label="削除">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>' +
+          '</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    app.innerHTML =
+      '<div class="header">' +
+        '<div><div class="brand-tag">' + labels.tag + '</div><div class="brand-title">' + labels.title + '</div></div>' +
+        '<button class="lock-btn" id="lock-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> 閉じる</button>' +
+      '</div>' +
+
+      '<div class="list-switch">' +
+        '<button type="button" data-list="expense" class="' + (list === 'expense' ? 'active' : '') + '">支出メモ</button>' +
+        '<button type="button" data-list="wishlist" class="' + (list === 'wishlist' ? 'active' : '') + '">行きたい店リスト</button>' +
+      '</div>' +
+
+      '<div class="total-panel">' +
+        '<div class="total-label">' + labels.totalLabel + '</div>' +
+        '<div class="total-value' + (state.stamped ? ' flash' : '') + '" id="total-value">' + formatYen(total) + '</div>' +
+        '<div class="total-breakdown"><span>支出計：<b>' + formatYen(total1) + '</b></span><span>収入計：<b>' + formatYen(total2) + '</b></span></div>' +
+        '<div class="total-count">RECORDS: ' + visible.length + ' / ' + entries.length + '</div>' +
+      '</div>' +
+
+      '<div class="form-card">' +
+        '<div class="form-panel-header' + (state.formVisible ? ' expanded' : '') + '">' +
+          '<div class="form-panel-title">INPUT PANEL</div>' +
+          '<button type="button" class="toggle-btn" id="toggle-form">' +
+            (state.formVisible ? '非表示' : '表示') +
+            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="transform: rotate(' + (state.formVisible ? '180' : '0') + 'deg)"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</button>' +
+        '</div>' +
+        (state.formVisible ?
+          '<form id="entry-form">' +
+            '<div class="form-grid">' +
+              '<div class="form-field"><label class="form-label">日付</label><input class="form-input mono" type="date" id="f-date" value="' + todayStr() + '" /></div>' +
+              '<div class="form-field stack-field">' +
+                '<div class="stack-sub"><label class="stack-sub-label">金額１</label><input class="form-input mono" type="number" inputmode="numeric" placeholder="0" id="f-amount1" /></div>' +
+                '<div class="stack-sub"><label class="stack-sub-label">金額２</label><input class="form-input mono" type="number" inputmode="numeric" placeholder="0" id="f-amount2" /></div>' +
+              '</div>' +
+              '<div class="form-field"><label class="form-label">支出</label><input class="form-input" type="text" placeholder="例：食費" id="f-item1" /></div>' +
+              '<div class="form-field"><label class="form-label">収入</label><input class="form-input" type="text" placeholder="例：給与" id="f-item2" /></div>' +
+              '<div class="form-field full">' +
+                '<label class="form-label">カテゴリー</label>' +
+                '<input class="form-input" type="text" list="category-options" placeholder="例：' + DEFAULT_CATEGORIES[list][0] + '" id="f-category" />' +
+                '<datalist id="category-options">' + categoryDatalistHtml() + '</datalist>' +
+              '</div>' +
+              '<div class="form-field full stack-field">' +
+                '<div class="stack-sub"><label class="stack-sub-label">評価１</label>' + starRow('form-rating1', state.fRating1, 22, true) + '</div>' +
+                '<div class="stack-sub"><label class="stack-sub-label">評価２</label>' + starRow('form-rating2', state.fRating2, 22, true) + '</div>' +
+              '</div>' +
+            '</div>' +
+            (state.formError ? '<div class="form-error">' + escapeHtml(state.formError) + '</div>' : '') +
+            '<button class="add-btn" type="submit"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14"/><path d="M5 12h14"/></svg> 記帳する</button>' +
+          '</form>'
+        : '') +
+      '</div>' +
+
+      '<div class="ledger-heading"><span>記録一覧</span><span>' + visible.length + '件</span></div>' +
+      categoryChipsHtml() +
+      rows +
+      (state.saveError ? '<div class="save-error">' + escapeHtml(state.saveError) + '</div>' : '') +
+
+      '<div class="reset-row">' +
+        (!state.confirmingReset
+          ? '<button class="reset-link" id="reset-link-main">帳面をリセット（パスワードと全リストのデータを消去）</button>'
+          : '<div class="reset-confirm"><span>本当にリセットしますか？</span><button class="danger" id="reset-yes-main">リセットする</button><button id="reset-no-main">やめる</button></div>') +
+      '</div>';
+
+    // events
+    document.getElementById('lock-btn').addEventListener('click', () => { state.unlocked = false; render(); });
+
+    document.querySelectorAll('.list-switch button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.activeList = btn.getAttribute('data-list');
+        state.formError = '';
+        render();
+      });
+    });
+
+    document.querySelectorAll('.category-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        state.categoryFilter[list] = chip.getAttribute('data-cat');
+        render();
+      });
+    });
+
+    const toggleFormBtn = document.getElementById('toggle-form');
+    if (toggleFormBtn) toggleFormBtn.addEventListener('click', () => {
+      state.formVisible = !state.formVisible;
+      render();
+    });
+
+    document.querySelectorAll('[data-star-target="form-rating1"] .star-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const v = Number(btn.getAttribute('data-star-value'));
+        state.fRating1 = state.fRating1 === v ? v - 1 : v;
+        render();
+      });
+    });
+    document.querySelectorAll('[data-star-target="form-rating2"] .star-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const v = Number(btn.getAttribute('data-star-value'));
+        state.fRating2 = state.fRating2 === v ? v - 1 : v;
+        render();
+      });
+    });
+
+    visible.forEach((en) => {
+      [['row1-' + en.id, 'rating1'], ['row2-' + en.id, 'rating2']].forEach(([targetId, field]) => {
+        const row = document.querySelector('[data-star-target="' + targetId + '"]');
+        if (!row) return;
+        row.querySelectorAll('.star-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const v = Number(btn.getAttribute('data-star-value'));
+            en[field] = en[field] === v ? v - 1 : v;
+            await persist();
+            render();
+          });
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-del]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del');
+        state.lists[list] = state.lists[list].filter((e) => e.id !== id);
+        await persist();
+        render();
+      });
+    });
+
+    const entryForm = document.getElementById('entry-form');
+    if (entryForm) entryForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      state.formError = '';
+      const item1 = document.getElementById('f-item1').value.trim();
+      const item2 = document.getElementById('f-item2').value.trim();
+      const amount1 = document.getElementById('f-amount1').value;
+      const amount2 = document.getElementById('f-amount2').value;
+      const category = document.getElementById('f-category').value.trim();
+      const date = document.getElementById('f-date').value || todayStr();
+      if (!item1 && !item2) { state.formError = '支出または収入を入力してください'; render(); return; }
+      if ((!amount1 || Number(amount1) <= 0) && (!amount2 || Number(amount2) <= 0)) {
+        state.formError = '金額１または金額２を入力してください'; render(); return;
+      }
+      const entry = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        date,
+        item1, amount1: Number(amount1) || 0, rating1: state.fRating1,
+        item2, amount2: Number(amount2) || 0, rating2: state.fRating2,
+        category,
+      };
+      state.lists[list].push(entry);
+      state.fRating1 = 0;
+      state.fRating2 = 0;
+      await persist();
+      state.stamped = true;
+      render();
+      setTimeout(() => { state.stamped = false; const el = document.getElementById('total-value'); if (el) el.classList.remove('flash'); }, 650);
+    });
+
+    const rlm = document.getElementById('reset-link-main');
+    if (rlm) rlm.addEventListener('click', () => { state.confirmingReset = true; render(); });
+    const rym = document.getElementById('reset-yes-main');
+    if (rym) rym.addEventListener('click', handleReset);
+    const rnm = document.getElementById('reset-no-main');
+    if (rnm) rnm.addEventListener('click', () => { state.confirmingReset = false; render(); });
+  }
+
+  function render() {
+    if (state.loading) {
+      app.innerHTML = '<div class="loading">読み込み中…</div>';
+      return;
+    }
+    if (!state.unlocked) {
+      renderGate();
+      return;
+    }
+    renderMain();
+  }
+
+  loadData();
+})();
+</script>
+</body>
+</html>
