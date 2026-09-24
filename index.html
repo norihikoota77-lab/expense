@@ -453,6 +453,10 @@
     font-size: 12px;
   }
   .entry-ratings { display: flex; flex-direction: column; gap: 2px; }
+  .entry-memo { grid-column: 2 / -1; color: var(--text-muted); font-size: 11px; line-height: 1.4; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .entry-memo-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-muted); margin-right: 5px; }
+  .memo-field { grid-column: 1 / -1; }
+  .memo-input { min-height: 58px; resize: vertical; line-height: 1.5; }
   .del-btn {
     background: none; border: none; color: var(--text-muted);
     cursor: pointer; padding: 8px;
@@ -483,7 +487,8 @@
       grid-template-areas:
         "date del"
         "items items"
-        "amounts ratings";
+        "amounts ratings"
+        "memo memo";
       row-gap: 3px;
       padding: 7px 6px;
     }
@@ -494,6 +499,7 @@
     .entry-items { grid-area: items; }
     .entry-amounts { grid-area: amounts; align-items: flex-start; }
     .entry-ratings { grid-area: ratings; align-items: flex-end; }
+    .entry-memo { grid-area: memo; grid-column: auto; }
     .form-grid { grid-template-columns: 1fr; }
     .total-value { font-size: 32px; }
   }
@@ -796,11 +802,11 @@
           '</div>' +
           '<div class="entry-items">' +
             '<div class="entry-item-half">' +
-              '<div class="entry-item-tag expense">' + (list === 'expense' ? '項目①' : '支出') + '</div>' +
+              '<div class="entry-item-tag expense">' + '項目①' + '</div>' +
               '<div class="entry-item-name">' + escapeHtml(en.item1 || '－') + '</div>' +
             '</div>' +
             '<div class="entry-item-half">' +
-              '<div class="entry-item-tag income">' + (list === 'expense' ? '項目②' : '収入') + '</div>' +
+              '<div class="entry-item-tag income">' + '項目②' + '</div>' +
               '<div class="entry-item-name">' + escapeHtml(en.item2 || '－') + '</div>' +
             '</div>' +
           '</div>' +
@@ -812,6 +818,7 @@
             starRow('row1-' + en.id, en.rating1 || 0, 14, true) +
             starRow('row2-' + en.id, en.rating2 || 0, 14, true) +
           '</div>' +
+          (en.memo ? '<div class="entry-memo"><span class="entry-memo-label">MEMO</span>' + escapeHtml(en.memo) + '</div>' : '') +
           '<button class="edit-btn" data-edit="' + en.id + '" aria-label="修正">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>' +
           '</button>' +
@@ -836,7 +843,7 @@
       '<div class="total-panel">' +
         '<div class="total-label">' + labels.totalLabel + '</div>' +
         '<div class="total-value' + (state.stamped ? ' flash' : '') + '" id="total-value">' + formatYen(total) + '</div>' +
-        '<div class="total-breakdown"><span>' + (list === 'expense' ? '項目①計' : '支出計') + '：<b>' + formatYen(total1) + '</b></span><span>' + (list === 'expense' ? '項目②計' : '収入計') + '：<b>' + formatYen(total2) + '</b></span></div>' +
+        '<div class="total-breakdown"><span>' + '項目①計' + '：<b>' + formatYen(total1) + '</b></span><span>' + '項目②計' + '：<b>' + formatYen(total2) + '</b></span></div>' +
         '<div class="total-count">RECORDS: ' + visible.length + ' / ' + entries.length + '</div>' +
       '</div>' +
 
@@ -856,12 +863,16 @@
                 '<div class="stack-sub"><label class="stack-sub-label">金額１</label><input class="form-input mono" type="number" inputmode="numeric" placeholder="0" id="f-amount1" value="' + (editing ? escapeHtml(editing.amount1 || '') : '') + '" /></div>' +
                 '<div class="stack-sub"><label class="stack-sub-label">金額２</label><input class="form-input mono" type="number" inputmode="numeric" placeholder="0" id="f-amount2" value="' + (editing ? escapeHtml(editing.amount2 || '') : '') + '" /></div>' +
               '</div>' +
-              '<div class="form-field"><label class="form-label">' + (list === 'expense' ? '項目①' : '支出') + '</label><input class="form-input" type="text" placeholder="例：食費" id="f-item1" value="' + (editing ? escapeHtml(editing.item1 || '') : '') + '" /></div>' +
-              '<div class="form-field"><label class="form-label">' + (list === 'expense' ? '項目②' : '収入') + '</label><input class="form-input" type="text" placeholder="例：日用品" id="f-item2" value="' + (editing ? escapeHtml(editing.item2 || '') : '') + '" /></div>' +
+              '<div class="form-field"><label class="form-label">' + '項目①' + '</label><input class="form-input" type="text" placeholder="例：食費" id="f-item1" value="' + (editing ? escapeHtml(editing.item1 || '') : '') + '" /></div>' +
+              '<div class="form-field"><label class="form-label">' + '項目②' + '</label><input class="form-input" type="text" placeholder="例：日用品" id="f-item2" value="' + (editing ? escapeHtml(editing.item2 || '') : '') + '" /></div>' +
               '<div class="form-field full">' +
                 '<label class="form-label">カテゴリー</label>' +
                 '<input class="form-input" type="text" list="category-options" placeholder="例：' + DEFAULT_CATEGORIES[list][0] + '" id="f-category" value="' + (editing ? escapeHtml(editing.category || '') : '') + '" />' +
                 '<datalist id="category-options">' + categoryDatalistHtml() + '</datalist>' +
+              '</div>' +
+              '<div class="form-field full memo-field">' +
+                '<label class="form-label">メモ</label>' +
+                '<textarea class="form-input memo-input" id="f-memo" placeholder="自由にメモを入力">' + (editing ? escapeHtml(editing.memo || '') : '') + '</textarea>' +
               '</div>' +
               '<div class="form-field full stack-field">' +
                 '<div class="stack-sub"><label class="stack-sub-label">評価１</label>' + starRow('form-rating1', editing ? (editing.rating1 || 0) : state.fRating1, 22, true) + '</div>' +
@@ -974,8 +985,9 @@
       const amount1 = document.getElementById('f-amount1').value;
       const amount2 = document.getElementById('f-amount2').value;
       const category = document.getElementById('f-category').value.trim();
+      const memo = document.getElementById('f-memo').value.trim();
       const date = document.getElementById('f-date').value || todayStr();
-      if (!item1 && !item2) { state.formError = list === 'expense' ? '項目①または項目②を入力してください' : '支出または収入を入力してください'; render(); return; }
+      if (!item1 && !item2) { state.formError = '項目①または項目②を入力してください'; render(); return; }
       if ((!amount1 || Number(amount1) <= 0) && (!amount2 || Number(amount2) <= 0)) {
         state.formError = '金額１または金額２を入力してください'; render(); return;
       }
@@ -988,6 +1000,7 @@
           target.item2 = item2;
           target.amount2 = Number(amount2) || 0;
           target.category = category;
+          target.memo = memo;
           target.rating1 = state.fRating1;
           target.rating2 = state.fRating2;
         }
@@ -999,6 +1012,7 @@
           item1, amount1: Number(amount1) || 0, rating1: state.fRating1,
           item2, amount2: Number(amount2) || 0, rating2: state.fRating2,
           category,
+          memo,
         };
         state.lists[list].push(entry);
       }
