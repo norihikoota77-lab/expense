@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="支出メモ" />
+  <meta name="description" content="端末内だけにデータを保存する自分用の支出メモ" />
 <meta name="theme-color" content="#0a0908" />
 <title>支出メモ | EXPENSE LEDGER</title>
 <style>
@@ -506,16 +507,13 @@
     wishlist: ['レストラン', 'カフェ', '居酒屋', '観光', 'ショッピング', 'その他'],
   };
 
+  // ============================================================
+  // DEVICE-ONLY STORAGE
+  // このアプリはクラウド/外部ストレージを一切使用せず、
+  // 現在のスマホ・ブラウザの localStorage にだけ保存します。
+  // ============================================================
   const storageAdapter = {
     async get(key) {
-      if (window.storage && typeof window.storage.get === 'function') {
-        try {
-          const res = await window.storage.get(key, false);
-          return res || null;
-        } catch (e) {
-          // フォールバックへ
-        }
-      }
       try {
         const raw = window.localStorage.getItem(key);
         return raw !== null ? { key, value: raw, shared: false } : null;
@@ -524,14 +522,6 @@
       }
     },
     async set(key, value) {
-      if (window.storage && typeof window.storage.set === 'function') {
-        try {
-          const r = await window.storage.set(key, value, false);
-          if (r) return r;
-        } catch (e) {
-          // フォールバックへ
-        }
-      }
       try {
         window.localStorage.setItem(key, value);
         return { key, value, shared: false };
@@ -540,9 +530,6 @@
       }
     },
     async remove(key) {
-      if (window.storage && typeof window.storage.delete === 'function') {
-        try { await window.storage.delete(key, false); } catch (e) {}
-      }
       try { window.localStorage.removeItem(key); } catch (e) {}
     },
   };
@@ -677,7 +664,7 @@
           '<button class="gate-btn" type="submit">' + (setupMode ? '設定して開く' : '開く') + '</button>' +
         '</form>' +
         (setupMode
-          ? '<div class="gate-note">パスワードはこの端末のあなたの領域に保存され、次回開いたときも同じ帳面が自動的に開きます。忘れた場合は帳面をリセットして最初から作り直してください。</div>' +
+          ? '<div class="gate-note">データはこの端末のこのブラウザにのみ保存されます。PCや別のスマホとは共有されません。ブラウザのデータを削除すると記録も消えるため、必要ならバックアップ機能を利用してください。</div>' +
             '<div class="reset-row">' +
               '<button class="reset-link" id="recheck-link">保存データを開く（既存の帳面を読み込み直す）</button>' +
               (state.recheckMsg ? '<div class="gate-error" style="margin-top:8px">' + escapeHtml(state.recheckMsg) + '</div>' : '') +
@@ -825,6 +812,7 @@
         '<div><div class="brand-tag">' + labels.tag + '</div><div class="brand-title">' + labels.title + '</div></div>' +
         '<button class="lock-btn" id="lock-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> 閉じる</button>' +
       '</div>' +
+      '<div style="font-size:10px;color:var(--text-muted);margin:-8px 0 14px;text-align:right;font-family:JetBrains Mono,monospace;">DEVICE ONLY / この端末に保存</div>' +
 
       '<div class="list-switch">' +
         '<button type="button" data-list="expense" class="' + (list === 'expense' ? 'active' : '') + '">支出メモ</button>' +
@@ -878,6 +866,11 @@
       (state.saveError ? '<div class="save-error">' + escapeHtml(state.saveError) + '</div>' : '') +
 
       '<div class="reset-row">' +
+        '<button class="reset-link" id="backup-btn">データをバックアップ</button> ' +
+        '<button class="reset-link" id="restore-btn">バックアップから復元</button>' +
+        '<input type="file" id="restore-file" accept="application/json" style="display:none" />' +
+        '<div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6;">端末保存型のため、機種変更やブラウザデータ削除に備えてバックアップできます。</div>' +
+        '<br>' +
         (!state.confirmingReset
           ? '<button class="reset-link" id="reset-link-main">帳面をリセット（パスワードと全リストのデータを消去）</button>'
           : '<div class="reset-confirm"><span>本当にリセットしますか？</span><button class="danger" id="reset-yes-main">リセットする</button><button id="reset-no-main">やめる</button></div>') +
@@ -975,6 +968,62 @@
       render();
       setTimeout(() => { state.stamped = false; const el = document.getElementById('total-value'); if (el) el.classList.remove('flash'); }, 650);
     });
+
+    const backupBtn = document.getElementById('backup-btn');
+    if (backupBtn) backupBtn.addEventListener('click', () => {
+      const backup = {
+        app: 'expense-memo',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: {
+          password: state.storedPassword,
+          lists: state.lists
+        }
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'expense-memo-backup-' + todayStr() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    const restoreBtn = document.getElementById('restore-btn');
+    const restoreFile = document.getElementById('restore-file');
+    if (restoreBtn && restoreFile) {
+      restoreBtn.addEventListener('click', () => restoreFile.click());
+      restoreFile.addEventListener('change', async () => {
+        const file = restoreFile.files && restoreFile.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const backup = JSON.parse(text);
+          const data = backup && backup.data ? backup.data : backup;
+          if (!data || typeof data !== 'object' || !data.lists) {
+            alert('バックアップ形式が正しくありません。');
+            return;
+          }
+          if (!confirm('現在の端末データをバックアップの内容で上書きします。よろしいですか？')) return;
+          state.storedPassword = data.password || null;
+          state.hasPassword = !!data.password;
+          state.lists = {
+            expense: Array.isArray(data.lists.expense) ? data.lists.expense : [],
+            wishlist: Array.isArray(data.lists.wishlist) ? data.lists.wishlist : []
+          };
+          state.unlocked = true;
+          await persist();
+          render();
+          alert('バックアップを復元しました。');
+        } catch (e) {
+          alert('バックアップの読み込みに失敗しました。');
+        } finally {
+          restoreFile.value = '';
+        }
+      });
+    }
 
     const rlm = document.getElementById('reset-link-main');
     if (rlm) rlm.addEventListener('click', () => { state.confirmingReset = true; render(); });
