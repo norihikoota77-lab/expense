@@ -487,6 +487,10 @@
   .entry-item-tag.memo { color: var(--saturday); }
   .entry-item-name.memo-text { white-space: normal; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   textarea.form-input { min-height: 64px; resize: none; line-height: 1.5; }
+  .entry-items { flex-direction: column; gap: 6px; }
+  .entry-item-pair { display: flex; gap: 8px; min-width: 0; }
+  .entry-item-memo { min-width: 0; }
+  @media (min-width: 481px) { .entry-row { grid-template-columns: 62px 1fr 90px 84px 30px; } }
 </style>
 </head>
 <body>
@@ -558,7 +562,7 @@
   function starRow(targetId, value, size, editable) {
     value = Number(value) || 0;
     let html = '<div class="star-row" data-star-target="' + targetId + '">';
-    for (let n = 1; n <= 3; n++) {
+    for (let n = 1; n <= 5; n++) {
       const pct = value >= n ? 100 : (value >= n - 0.5 ? 50 : 0);
       html += '<button type="button" class="star-btn" data-star-value="' + n + '" ' +
         (editable ? '' : 'style="cursor:default"') + '>' +
@@ -727,8 +731,8 @@
             (en.category ? '<span class="entry-cat-badge">' + escapeHtml(en.category) + '</span>' : '') +
           '</div>' +
           '<div class="entry-items">' +
-            '<div class="entry-item-half"><div class="entry-item-tag expense">支出</div><div class="entry-item-name">' + escapeHtml(en.item1 || '－') + '</div></div>' +
-            '<div class="entry-item-half"><div class="entry-item-tag memo">メモ</div><div class="entry-item-name memo-text">' + escapeHtml(memoOf(en) || '－') + '</div></div>' +
+            '<div class="entry-item-pair"><div class="entry-item-half"><div class="entry-item-tag expense">ストア</div><div class="entry-item-name">' + escapeHtml(en.store || '－') + '</div></div><div class="entry-item-half"><div class="entry-item-tag expense">アイテム</div><div class="entry-item-name">' + escapeHtml(en.item1 || '－') + '</div></div></div>' +
+            (memoOf(en) ? '<div class="entry-item-memo"><div class="entry-item-tag memo">メモ</div><div class="entry-item-name memo-text">' + escapeHtml(memoOf(en)) + '</div></div>' : '') +
           '</div>' +
           '<div class="entry-amounts"><div class="entry-amount-1">' + formatYen(en.amount1) + '</div><div class="entry-amount-2">' + formatYen(en.amount2) + '</div></div>' +
           '<div class="entry-ratings">' + starRow('row1-' + en.id, en.rating1 || 0, 14, true) + starRow('row2-' + en.id, en.rating2 || 0, 14, true) + '</div>' +
@@ -769,8 +773,9 @@
                 '<div class="stack-sub"><label class="stack-sub-label">金額１</label><input class="form-input mono" type="number" inputmode="numeric" placeholder="0" id="f-amount1" /></div>' +
                 '<div class="stack-sub"><label class="stack-sub-label">金額２</label><input class="form-input mono" type="number" inputmode="numeric" placeholder="0" id="f-amount2" /></div>' +
               '</div>' +
-              '<div class="form-field"><label class="form-label">支出</label><input class="form-input" type="text" placeholder="例：食費" id="f-item1" /></div>' +
-              '<div class="form-field"><label class="form-label">メモ</label><textarea class="form-input" rows="2" placeholder="例：まとめ買い・ポイント5倍" id="f-memo"></textarea></div>' +
+              '<div class="form-field"><label class="form-label">ストア</label><input class="form-input" type="text" placeholder="例：セブン-イレブン" id="f-store" /></div>' +
+              '<div class="form-field"><label class="form-label">アイテム</label><input class="form-input" type="text" placeholder="例：コーヒー" id="f-item1" /></div>' +
+              '<div class="form-field full"><label class="form-label">メモ</label><textarea class="form-input" rows="2" placeholder="例：まとめ買い・ポイント5倍" id="f-memo"></textarea></div>' +
               '<div class="form-field full"><label class="form-label">カテゴリー</label><input class="form-input" type="text" list="category-options" placeholder="例：' + DEFAULT_CATEGORIES[list][0] + '" id="f-category" /><datalist id="category-options">' + categoryDatalistHtml() + '</datalist></div>' +
               '<div class="form-field full stack-field">' +
                 '<div class="stack-sub"><label class="stack-sub-label">評価１</label>' + starRow('form-rating1', state.fRating1, 22, true) + '</div>' +
@@ -843,18 +848,19 @@
       state.formError = '';
       const item1 = document.getElementById('f-item1').value.trim();
       const memo = document.getElementById('f-memo').value.trim();
+      const store = document.getElementById('f-store').value.trim();
       const amount1 = document.getElementById('f-amount1').value;
       const amount2 = document.getElementById('f-amount2').value;
       const category = document.getElementById('f-category').value.trim();
       const date = document.getElementById('f-date').value || todayStr();
-      if (!item1 && !memo) { state.formError = '支出またはメモを入力してください'; render(); return; }
+      if (!store && !item1 && !memo) { state.formError = 'ストア・アイテム・メモのいずれかを入力してください'; render(); return; }
       if ((!amount1 || Number(amount1) <= 0) && (!amount2 || Number(amount2) <= 0)) {
         state.formError = '金額１または金額２を入力してください'; render(); return;
       }
       const entry = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         date,
-        item1, amount1: Number(amount1) || 0, rating1: state.fRating1,
+        store, item1, amount1: Number(amount1) || 0, rating1: state.fRating1,
         memo, amount2: Number(amount2) || 0, rating2: state.fRating2,
         category,
       };
